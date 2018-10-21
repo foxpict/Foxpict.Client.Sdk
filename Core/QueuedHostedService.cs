@@ -32,6 +32,7 @@ namespace Foxpict.Client.Sdk {
     }
 
     public Task StopAsync (CancellationToken cancellationToken) {
+      if (_backgroundTask == null) return null;
       _shutdown.Cancel ();
       return Task.WhenAny (_backgroundTask, Task.Delay (Timeout.Infinite, cancellationToken));
     }
