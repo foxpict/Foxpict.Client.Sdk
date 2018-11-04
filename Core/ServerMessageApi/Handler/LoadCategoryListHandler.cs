@@ -26,12 +26,15 @@ namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
 
       readonly IIntentManager mIntentManager;
 
+      readonly ICategoryDao mCategoryDao;
+
       readonly ILabelDao mLabelDao;
 
-      public Handler (IMemoryCache memoryCache, IIntentManager intentManager, ILabelDao labelDao) {
+      public Handler (IMemoryCache memoryCache, IIntentManager intentManager, ICategoryDao categoryDao, ILabelDao labelDao) {
         this.mLogger = LogManager.GetCurrentClassLogger ();
         this.mMemoryCache = memoryCache;
         this.mIntentManager = intentManager;
+        this.mCategoryDao = categoryDao;
         this.mLabelDao = labelDao;
       }
 
@@ -39,12 +42,13 @@ namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
         mLogger.Debug ("IN - {@Param}", param);
         ServerMessageServiceParam paramObj = (ServerMessageServiceParam) param;
         var paramHandler = paramObj.Data as HandlerParameter;
-        if (paramHandler.LabelId.HasValue) {
-          // ラベルから関連するコンテント一覧を生成する場合
-          var label = mLabelDao.LoadLabel (paramHandler.LabelId.Value);
+        if (paramHandler.LabelId != null && paramHandler.LabelId.Length > 0) {
+
+          var categories = mCategoryDao.FindCategory(true,paramHandler.LabelId);
+
           var cacheEntryOptions = new MemoryCacheEntryOptions ();
           mMemoryCache.Set (cacheKey,
-            new CategoryListParam () { CategoryList = label.LinkCategoryList.ToArray () },
+            new CategoryListParam () { CategoryList = categories.ToArray () },
             cacheEntryOptions);
         } else {
           mLogger.Warn ("カテゴリ一覧の取得ソースを指定してください。");
@@ -58,7 +62,7 @@ namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
 
     public class HandlerParameter {
 
-      public long? LabelId;
+      public long[] LabelId;
 
       public int PageNo;
     }

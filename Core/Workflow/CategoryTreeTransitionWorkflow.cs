@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Foxpict.Client.Sdk.Cache;
 using Foxpict.Client.Sdk.Core.ServerMessageApi.Handler;
+using Foxpict.Client.Sdk.Core.Utils.Workflow;
 using Foxpict.Client.Sdk.Core.Workflow.Param;
 using Foxpict.Client.Sdk.Dao;
 using Foxpict.Client.Sdk.Infra;
@@ -184,7 +185,7 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
 
       var intentManager = mContainer.GetInstance<IIntentManager> ();
       var memCache = mContainer.GetInstance<IMemoryCache> ();
-      var categoryDao = mContainer.GetInstance<ICategoryDao>();
+      var categoryDao = mContainer.GetInstance<ICategoryDao> ();
 
       try {
         CategoryListParam objCategoryList;
@@ -287,7 +288,7 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
     }
 
     /// <summary>
-    /// ラベル情報取得／子階層ラベル取得
+    /// ラベルツリー更新要求
     /// </summary>
     /// <param name="param"></param>
     /// <returns></returns>
@@ -323,6 +324,8 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
               if (memCache.TryGetValue ("ContentList", out objContentList)) {
                 mCurrentPreviewContentListPosition = paramObject.Position;
 
+                WorkflowUtils.ExecuteInvalidatePreviewInfo (intentManager, memCache, objContentList.ContentList.Length, mCurrentPreviewContentListPosition);
+
                 // コンテント一覧の項目位置(ReqInvalidatePreviewParameter.Position)にあるコンテント情報を読み込む
                 var content = objContentList.ContentList[mCurrentPreviewContentListPosition];
                 currentPreviewContentId = content.Id;
@@ -338,6 +341,9 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
               if (memCache.TryGetValue ("ContentList", out objContentList)) {
                 if (objContentList.ContentList.Length > mCurrentPreviewContentListPosition + 1) {
                   mCurrentPreviewContentListPosition = mCurrentPreviewContentListPosition + 1;
+
+                  WorkflowUtils.ExecuteInvalidatePreviewInfo (intentManager, memCache, objContentList.ContentList.Length, mCurrentPreviewContentListPosition);
+
                   var content = objContentList.ContentList[mCurrentPreviewContentListPosition];
                   this.mLogger.Debug ($"現在位置の次のコンテントを読み込みます({@content.Id})");
                   currentPreviewContentId = content.Id;
@@ -354,6 +360,9 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
               if (memCache.TryGetValue ("ContentList", out objContentList)) {
                 if (mCurrentPreviewContentListPosition > 0) {
                   mCurrentPreviewContentListPosition = mCurrentPreviewContentListPosition - 1;
+
+                  WorkflowUtils.ExecuteInvalidatePreviewInfo (intentManager, memCache, objContentList.ContentList.Length, mCurrentPreviewContentListPosition);
+
                   var content = objContentList.ContentList[mCurrentPreviewContentListPosition];
                   this.mLogger.Debug ($"現在位置の前のコンテントを読み込みます({@content.Id})");
                   currentPreviewContentId = content.Id;
@@ -445,10 +454,17 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
         this.mLogger.Info ("レジスタ名({@RegisterName})から値を読み込みます。", paramObject.RegisterName);
         Content content;
         if (memCache.TryGetValue (paramObject.RegisterName, out content)) {
+          // コンテント情報の更新通知を行います。
           memCache.Set ("PreviewContent",
             content,
             new MemoryCacheEntryOptions ());
           intentManager.AddIntent (ServiceType.FrontendIpc, "UpdateProp", "PreviewContent");
+
+          // コンテント情報から関連カテゴリを取得し、更新通知を行います。
+          memCache.Set ("PreviewContentLinkCategory",
+            content.LinkCategory,
+            new MemoryCacheEntryOptions ());
+          intentManager.AddIntent (ServiceType.FrontendIpc, "UpdateProp", "PreviewContentLinkCategory");
         } else {
           throw new ApplicationException ("レジスタからContentオブジェクトを取得できませんでした。");
         }
@@ -491,8 +507,8 @@ namespace Pixstock.Applus.Foundations.ContentBrowser.Transitions {
       JsonConvert.PopulateObject (param.ToString (), paramObject);
 
       var intentParam = new LoadCategoryListHandler.HandlerParameter ();
-      if (paramObject.LabelId.HasValue) {
-        intentParam.LabelId = paramObject.LabelId.Value;
+      if (paramObject.LabelId != null && paramObject.LabelId.Length > 0) {
+        intentParam.LabelId = paramObject.LabelId;
       } else {
         mLogger.Debug ("コンテント一覧を作成したいソースを指定してください。");
         return;

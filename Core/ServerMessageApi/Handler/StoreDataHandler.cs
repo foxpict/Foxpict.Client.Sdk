@@ -1,14 +1,14 @@
 using System;
-using NLog;
-using Foxpict.Common.Model;
+using Foxpict.Client.App.Models;
+using Foxpict.Client.Sdk.Core.Service;
+using Foxpict.Client.Sdk.Dao;
 using Foxpict.Client.Sdk.Infra;
 using Foxpict.Client.Sdk.Infra.Resolver;
-using Foxpict.Client.Sdk.Core.Service;
 using Foxpict.Client.Sdk.Infra.Resolver.Impl;
-using Foxpict.Client.Sdk.Dao;
-using Foxpict.Client.App.Models;
 using Foxpict.Client.Sdk.Models;
 using Foxpict.Client.Sdk.Workflow;
+using Foxpict.Common.Model;
+using NLog;
 
 namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
   /// <summary>
@@ -43,7 +43,9 @@ namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
             var content = (Content) paramHandler.Value;
             mConentDao.Update (content);
             if (paramHandler.UpdateNotificationFlag) {
-              mIntentManager.AddIntent (ServiceType.Workflow, "ACT_RESINVALIDATE_CONTENT", new ResInvalidateContentParameter { ContentId = content.Id });
+              mIntentManager.AddIntent (ServiceType.Workflow,
+                "ACT_RESINVALIDATE_CONTENT",
+                new ResInvalidateContentParameter { ContentId = content.Id });
             }
             break;
           default:

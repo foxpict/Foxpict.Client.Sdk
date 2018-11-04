@@ -171,5 +171,23 @@ namespace Foxpict.Client.Sdk.Dao {
 
       return linked_category;
     }
+
+    public List<Category> FindCategory (bool? albumCategory, long[] labelId) {
+      if (!albumCategory.HasValue) // TODO: 現在はアルバムカテゴリのみ取得可能とする
+        throw new NotSupportedException ("アルバムカテゴリのみ条件に含めることができます。");
+      else if (albumCategory.Value != true) // TODO: 現在はアルバムカテゴリは必須とする
+        throw new NotSupportedException ("アルバムカテゴリのみ条件に含めることができます。");
+      if (labelId == null) // TODO: 現在はラベルの条件指定は必須です。
+        throw new NotSupportedException ("ラベル一覧の指定は必須です。");
+
+      var request = new RestRequest ("category/w_album/{labels_cond}", Method.GET);
+      request.AddUrlSegment ("labels_cond", "+" + string.Join (",", labelId)); // ANDのみサポート
+
+      var response = mClient.Execute<PixstockResponseAapi<List<Category>>> (request);
+      if (!response.IsSuccessful)
+        throw new ApplicationException ("DAOの実行に失敗しました");
+
+      return response.Data.Value;
+    }
   }
 }

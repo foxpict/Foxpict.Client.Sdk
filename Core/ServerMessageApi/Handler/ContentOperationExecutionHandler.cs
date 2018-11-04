@@ -12,8 +12,11 @@ using NLog;
 namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
 
   /// <summary>
-  /// コンテントに関するサーバサイドへのロジックを実行する
+  /// コンテントオペレーション実行
   /// </summary>
+  /// <remarks>
+  /// コンテントに関するサーバサイドへのロジックを実行する
+  /// </remarks>
   public class ContentOperationExecutionHandler : IResolveDeclare {
     public string ResolveName => "ContentOperationExecution";
 
@@ -51,7 +54,7 @@ namespace Foxpict.Client.Sdk.Core.ServerMessageApi.Handler {
         foreach (var op in paramHandler.Operations) {
           switch (op.OperationName) {
             case "Read":
-            this.mLogger.Debug ("Readオペレーションを実行します");
+              this.mLogger.Debug ("Readオペレーションを実行します");
               mContentDao.UpdateRead (paramHandler.ContentId);
               var workflowParam = new ResInvalidateContentParameter () {
                 ContentId = paramHandler.ContentId,
